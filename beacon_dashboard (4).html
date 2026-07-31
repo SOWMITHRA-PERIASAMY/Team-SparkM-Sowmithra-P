@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lab Asset Checkout Beacon — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: #fff4e0;
+    background-image: radial-gradient(#2d2d2d18 2px, transparent 2px);
+    background-size: 18px 18px;
+    color: #2d2d2d;
+    margin: 0;
+    padding: 32px 28px;
+  }
+  .comic-font { font-family: 'Bangers', cursive; letter-spacing: 1px; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+  .title-row { display: flex; align-items: center; gap: 14px; }
+  h1 { font-size: 34px; margin: 0; color: #ef476f; text-shadow: 3px 3px 0 #2d2d2d; }
+  .subtitle { color: #6b6b6b; font-size: 13px; font-weight: 700; }
+  .config-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .config-row input {
+    background: #fff; border: 3px solid #2d2d2d; color: #2d2d2d;
+    border-radius: 12px; padding: 9px 14px; font-size: 13px; width: 240px; font-weight: 700;
+  }
+  button {
+    border: 3px solid #2d2d2d; border-radius: 12px; padding: 9px 16px; cursor: pointer;
+    font-size: 13px; font-weight: 900; box-shadow: 4px 4px 0 #2d2d2d;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  button:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 #2d2d2d; }
+  button:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 #2d2d2d; }
+  .btn-green { background: #06d6a0; color: #023d2c; }
+  .btn-pink { background: #ef476f; color: #fff; }
+
+  .mascot { width: 60px; height: 60px; flex-shrink: 0; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab-btn {
+    background: #fff; color: #6b6b6b; padding: 9px 18px; border: 3px solid #2d2d2d;
+    border-radius: 12px; font-size: 13px; font-weight: 800; box-shadow: 3px 3px 0 #2d2d2d;
+  }
+  .tab-btn.active { background: #ffd166; color: #2d2d2d; }
+  .tab-btn:hover { transform: translate(-1px,-1px); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--c); border: 4px solid #2d2d2d; border-radius: 20px; padding: 16px 18px;
+    box-shadow: 6px 6px 0 #2d2d2d; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .stat-card:hover { transform: translate(-3px,-3px) rotate(-1deg); box-shadow: 9px 9px 0 #2d2d2d; }
+  .stat-card .icon { font-size: 26px; }
+  .stat-card .label { font-size: 11px; font-weight: 900; text-transform: uppercase; margin-top: 4px; }
+  .stat-card .value { font-size: 32px; font-weight: 900; margin-top: 2px; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .asset-card {
+    background: #fff; border: 4px solid #2d2d2d; border-radius: 20px; padding: 18px;
+    box-shadow: 6px 6px 0 #2d2d2d; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .asset-card:hover { transform: translate(-4px,-4px) rotate(-1deg); box-shadow: 10px 10px 0 #2d2d2d; }
+  .asset-card .tool-icon { font-size: 38px; }
+  .asset-card .tool-name { font-weight: 900; font-size: 16px; margin: 6px 0 2px; }
+  .asset-card .asset-id { font-size: 11px; color: #999; margin-bottom: 8px; font-weight: 700; }
+
+  .badge {
+    padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 900;
+    border: 2px solid #2d2d2d; display: inline-block;
+  }
+  .badge-held { background: #ffd166; }
+  .badge-available { background: #06d6a0; }
+  .badge-tamper { background: #ef476f; color: #fff; }
+
+  .panel {
+    background: #fff; border: 4px solid #2d2d2d; border-radius: 20px; padding: 20px;
+    box-shadow: 6px 6px 0 #2d2d2d; margin-bottom: 20px;
+  }
+  .panel h2 { font-size: 20px; margin: 0 0 14px; color: #ef476f; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 2px dashed #2d2d2d33; font-size: 13px; font-weight: 700; }
+  th { color: #6b6b6b; font-weight: 900; font-size: 11px; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+
+  .usage-bar-track { background: #f1eee6; border: 2px solid #2d2d2d; border-radius: 6px; height: 12px; width: 100%; overflow: hidden; margin-top: 6px; }
+  .usage-bar-fill { background: #06d6a0; height: 100%; }
+
+  #connStatus { font-size: 12px; color: #6b6b6b; margin-top: 20px; font-weight: 700; }
+
+  .mascot-wrap { cursor: pointer; position: relative; }
+  .mascot-quote {
+    position: absolute; top: -14px; left: 68px; background: #fff; border: 3px solid #2d2d2d;
+    border-radius: 14px; padding: 8px 12px; font-size: 12px; font-weight: 800; white-space: nowrap;
+    box-shadow: 4px 4px 0 #2d2d2d; z-index: 10; animation: popIn .2s ease;
+  }
+  .mascot-quote:after {
+    content: ""; position: absolute; left: -10px; top: 18px; border: 8px solid transparent; border-right-color: #2d2d2d;
+  }
+
+  .action-bubble {
+    position: fixed; font-family: 'Bangers', cursive; font-size: 22px; color: #fff;
+    -webkit-text-stroke: 1.5px #2d2d2d; z-index: 999; pointer-events: none;
+    max-width: 280px; text-align: center; line-height: 1.2;
+    animation: bubblePop 1.8s ease forwards;
+  }
+  @keyframes bubblePop {
+    0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+    15% { transform: scale(1.3) rotate(4deg); opacity: 1; }
+    30% { transform: scale(1) rotate(-2deg); opacity: 1; }
+    80% { transform: scale(1) translateY(-10px); opacity: 1; }
+    100% { transform: scale(0.9) translateY(-30px); opacity: 0; }
+  }
+  @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .confetti-piece {
+    position: fixed; width: 10px; height: 10px; top: -20px; z-index: 998; pointer-events: none;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(110vh) rotate(540deg); opacity: 0.3; }
+  }
+
+  .error-bubble {
+    display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid #2d2d2d;
+    border-radius: 14px; padding: 10px 16px; box-shadow: 4px 4px 0 #2d2d2d; font-weight: 800;
+    font-size: 13px; color: #ef476f; width: fit-content;
+  }
+
+  .empty-state { text-align: center; padding: 30px; color: #6b6b6b; font-weight: 700; }
+  .empty-mascot { width: 100px; margin-bottom: 10px; }
+
+  .pow {
+    display: inline-block; background: #ffd166; border: 3px solid #2d2d2d; border-radius: 50%;
+    padding: 10px 14px; font-size: 13px; transform: rotate(-8deg); box-shadow: 4px 4px 0 #2d2d2d;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="title-row">
+    <div class="mascot-wrap" onclick="mascotQuote()" id="mascotWrap">
+    <svg class="mascot" viewBox="0 0 100 100" id="mascotSvg">
+      <circle cx="50" cy="30" r="18" fill="#ffd166" stroke="#2d2d2d" stroke-width="3"/>
+      <circle cx="43" cy="27" r="3" fill="#2d2d2d"/>
+      <circle cx="57" cy="27" r="3" fill="#2d2d2d"/>
+      <path d="M41 35 Q50 42 59 35" stroke="#2d2d2d" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <line x1="50" y1="48" x2="50" y2="74" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+      <line x1="50" y1="55" x2="28" y2="46" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+      <line x1="50" y1="55" x2="72" y2="46" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+      <line x1="50" y1="74" x2="34" y2="92" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+      <line x1="50" y1="74" x2="66" y2="92" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+    </div>
+    <div>
+      <h1 class="comic-font">LAB ASSET BEACON!</h1>
+      <div class="subtitle">Manager dashboard — refreshes every 5 seconds</div>
+    </div>
+  </div>
+  <div class="config-row">
+    <input id="backendUrl" type="text" placeholder="http://192.168.1.X:8000" value="http://localhost:8000">
+    <button class="btn-green" onclick="saveBackendUrl()">Connect</button>
+    <button class="btn-pink" onclick="exportPDF()">Download PDF Report</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showPage('overview')">Overview</button>
+  <button class="tab-btn" onclick="showPage('assets')">Assets</button>
+  <button class="tab-btn" onclick="showPage('usage')">Usage &amp; Maintenance</button>
+  <button class="tab-btn" onclick="showPage('logs')">Transaction Log</button>
+  <button class="tab-btn" onclick="showPage('tamper')">Tamper Events</button>
+</div>
+
+<!-- OVERVIEW PAGE -->
+<div class="page active" id="page-overview">
+  <div class="stat-grid">
+    <div class="stat-card" style="--c:#ffd166;"><div class="icon">🧰</div><div class="label">Tools out</div><div class="value">–</div></div>
+    <div class="stat-card" style="--c:#06d6a0;"><div class="icon">✅</div><div class="label">Available</div><div class="value" id="statAvailable">–</div></div>
+    <div class="stat-card" style="--c:#118ab2; color:#fff;"><div class="icon">🔄</div><div class="label">Transactions</div><div class="value" id="statTotal">–</div></div>
+    <div class="stat-card" style="--c:#ef476f; color:#fff;"><div class="icon">⚠️</div><div class="label">Tamper</div><div class="value" id="statTamper">–</div></div>
+  </div>
+  <div class="panel">
+    <h2 class="comic-font">Most Recent Activity!</h2>
+    <table>
+      <thead><tr><th>Time</th><th>User</th><th>Item</th><th>Action</th></tr></thead>
+      <tbody id="recentRows"><tr><td colspan="4">Waiting for data...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ASSETS PAGE -->
+<div class="page" id="page-assets">
+  <div class="panel">
+    <h2 class="comic-font">Physics Lab Equipment Status</h2>
+    <div class="card-grid" id="assetCards">
+      <div class="asset-card">Waiting for data...</div>
+    </div>
+  </div>
+</div>
+
+<!-- USAGE PAGE -->
+<div class="page" id="page-usage">
+  <div class="panel">
+    <h2 class="comic-font">Usage Frequency per Item</h2>
+    <div class="subtitle" style="margin-bottom:14px;">High checkout counts flag equipment worth reviewing for maintenance -- the same principle used for predictive maintenance on a factory floor.</div>
+    <table>
+      <thead><tr><th>Item</th><th>Times Checked Out</th><th style="width:200px;">Relative Usage</th></tr></thead>
+      <tbody id="usageRows"><tr><td colspan="3">Waiting for data...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- LOGS PAGE -->
+<div class="page" id="page-logs">
+  <div class="panel">
+    <h2 class="comic-font">Full Transaction Log</h2>
+    <table>
+      <thead><tr><th>Time</th><th>User</th><th>Item</th><th>Action</th></tr></thead>
+      <tbody id="logRows"><tr><td colspan="4">Waiting for data...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAMPER PAGE -->
+<div class="page" id="page-tamper">
+  <div class="panel">
+    <h2 class="comic-font">Tamper Events</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Details</th></tr></thead>
+      <tbody id="tamperRows">
+        <tr><td colspan="2">
+          <div class="empty-state">
+            <svg class="empty-mascot" viewBox="0 0 100 100">
+              <circle cx="50" cy="30" r="18" fill="#06d6a0" stroke="#2d2d2d" stroke-width="3"/>
+              <circle cx="43" cy="27" r="3" fill="#2d2d2d"/>
+              <circle cx="57" cy="27" r="3" fill="#2d2d2d"/>
+              <path d="M42 36 Q50 31 58 36" stroke="#2d2d2d" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <line x1="50" y1="48" x2="50" y2="74" stroke="#06d6a0" stroke-width="7" stroke-linecap="round"/>
+              <line x1="50" y1="54" x2="28" y2="64" stroke="#06d6a0" stroke-width="6" stroke-linecap="round"/>
+              <line x1="50" y1="54" x2="72" y2="64" stroke="#06d6a0" stroke-width="6" stroke-linecap="round"/>
+              <line x1="50" y1="74" x2="34" y2="92" stroke="#06d6a0" stroke-width="7" stroke-linecap="round"/>
+              <line x1="50" y1="74" x2="66" y2="92" stroke="#06d6a0" stroke-width="7" stroke-linecap="round"/>
+            </svg>
+            <div><span class="pow">ALL QUIET!</span></div>
+            <div style="margin-top:10px;">No tamper events -- nice and secure!</div>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="connStatus">Not connected yet.</div>
+
+<script>
+  let BACKEND_URL = localStorage.getItem("beaconBackendUrl") || "http://localhost:8000";
+  document.getElementById("backendUrl").value = BACKEND_URL;
+
+  // ---- Map your real RFID tag UIDs to friendly physics-lab tool names here ----
+  const ASSET_NAMES = {
+    "6D3AF06": { name: "Digital Multimeter", icon: "🔌" },
+    "526CFC6": { name: "Vernier Caliper", icon: "📏" },
+    "36DEF16": { name: "Spring Balance", icon: "⚖️" },
+    "2B1501A": { name: "Oscilloscope", icon: "📉" },
+    "E5DD257": { name: "Resistance Box", icon: "🧯" },
+  };
+  function toolInfo(uid) {
+    return ASSET_NAMES[uid] || { name: "Unregistered Tool", icon: "❔" };
+  }
+
+  let latestStatus = {}, latestUsage = [], latestLogs = [], latestTamper = [];
+  let previousLogCount = 0, previousTamperCount = 0, mascotRevertTimer = null;
+
+  // ---------- sound effects (synthesized, no audio files needed) ----------
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function playTone(freq, duration, type) {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || "square";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + duration / 1000);
+    } catch (e) { /* audio not available, fail silently */ }
+  }
+  function beepClick() { playTone(700, 90, "square"); }
+  function beepSuccess() { playTone(520, 90, "square"); setTimeout(() => playTone(780, 120, "square"), 90); }
+  function beepAlarm() { playTone(300, 150, "sawtooth"); setTimeout(() => playTone(220, 200, "sawtooth"), 150); }
+
+  // ---------- comic action bubbles ----------
+  function spawnBubble(text, color) {
+    const el = document.createElement("div");
+    el.className = "action-bubble";
+    el.textContent = text;
+    el.style.color = color || "#ef476f";
+    el.style.left = (40 + Math.random() * 160) + "px";
+    el.style.top = "120px";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1900);
+  }
+
+  // ---------- confetti ----------
+  function spawnConfetti() {
+    const colors = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2"];
+    for (let i = 0; i < 28; i++) {
+      const p = document.createElement("div");
+      p.className = "confetti-piece";
+      p.style.left = Math.random() * 100 + "vw";
+      p.style.background = colors[i % colors.length];
+      p.style.animationDuration = (1.2 + Math.random() * 1.2) + "s";
+      p.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 2600);
+    }
+  }
+
+  // ---------- mascot states ----------
+  const MASCOT_SAFE = `
+    <circle cx="50" cy="30" r="18" fill="#ffd166" stroke="#2d2d2d" stroke-width="3"/>
+    <rect x="38" y="24" width="24" height="7" rx="2" fill="#2d2d2d"/>
+    <path d="M41 36 Q50 41 59 36" stroke="#2d2d2d" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <line x1="50" y1="48" x2="50" y2="74" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="50" y1="55" x2="28" y2="46" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+    <line x1="50" y1="55" x2="72" y2="46" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+    <line x1="50" y1="74" x2="34" y2="92" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="50" y1="74" x2="66" y2="92" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>`;
+  const MASCOT_BUSY = `
+    <circle cx="50" cy="30" r="18" fill="#ffd166" stroke="#2d2d2d" stroke-width="3"/>
+    <circle cx="43" cy="27" r="3" fill="#2d2d2d"/>
+    <circle cx="57" cy="27" r="3" fill="#2d2d2d"/>
+    <path d="M43 35 Q50 33 57 35" stroke="#2d2d2d" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <line x1="50" y1="48" x2="50" y2="74" stroke="#118ab2" stroke-width="7" stroke-linecap="round"/>
+    <line x1="50" y1="55" x2="28" y2="46" stroke="#118ab2" stroke-width="6" stroke-linecap="round"/>
+    <line x1="50" y1="55" x2="74" y2="50" stroke="#118ab2" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="80" cy="52" r="8" fill="none" stroke="#2d2d2d" stroke-width="3"/>
+    <line x1="86" y1="58" x2="92" y2="64" stroke="#2d2d2d" stroke-width="3" stroke-linecap="round"/>
+    <line x1="50" y1="74" x2="34" y2="92" stroke="#118ab2" stroke-width="7" stroke-linecap="round"/>
+    <line x1="50" y1="74" x2="66" y2="92" stroke="#118ab2" stroke-width="7" stroke-linecap="round"/>`;
+  const MASCOT_TAMPER = `
+    <path d="M50 42 L70 50 L66 78 L50 90 L34 78 L30 50 Z" fill="#ef476f" stroke="#2d2d2d" stroke-width="3"/>
+    <circle cx="50" cy="30" r="18" fill="#f4a3a3" stroke="#2d2d2d" stroke-width="3"/>
+    <circle cx="43" cy="27" r="3.5" fill="#2d2d2d"/>
+    <circle cx="57" cy="27" r="3.5" fill="#2d2d2d"/>
+    <path d="M41 38 Q50 32 59 38" stroke="#2d2d2d" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="70" cy="18" r="5" fill="#ffd166" stroke="#2d2d2d" stroke-width="2"/>
+    <line x1="50" y1="48" x2="50" y2="70" stroke="#ef476f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="50" y1="60" x2="30" y2="90" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+    <line x1="50" y1="60" x2="70" y2="90" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>`;
+
+  function setMascotState(state) {
+    const svg = document.getElementById("mascotSvg");
+    if (state === "tamper") svg.innerHTML = MASCOT_TAMPER;
+    else if (state === "busy") svg.innerHTML = MASCOT_BUSY;
+    else svg.innerHTML = MASCOT_SAFE;
+  }
+
+  const QUOTES_SAFE = ["All clear in the lab, boss!", "Nothing to report, chief!", "Living my best mascot life."];
+  const QUOTES_BUSY = ["Someone's borrowing stuff!", "Keeping an eye on things...", "Busy day at the lab!"];
+  const QUOTES_TAMPER = ["Uh oh, lid alert!", "Something's up with the box!", "Sound the alarm!"];
+  function mascotQuote() {
+    const heldCount = Object.values(latestStatus).filter(i => !!i.held_by).length;
+    const isTamperActive = document.getElementById("mascotSvg").innerHTML.includes("50 42 L70 50");
+    const pool = isTamperActive ? QUOTES_TAMPER : (heldCount > 0 ? QUOTES_BUSY : QUOTES_SAFE);
+    const quote = pool[Math.floor(Math.random() * pool.length)];
+    const wrap = document.getElementById("mascotWrap");
+    const old = wrap.querySelector(".mascot-quote");
+    if (old) old.remove();
+    const bubble = document.createElement("div");
+    bubble.className = "mascot-quote";
+    bubble.textContent = quote;
+    wrap.appendChild(bubble);
+    beepClick();
+    setTimeout(() => bubble.remove(), 2500);
+  }
+
+  function saveBackendUrl() {
+    beepClick();
+    BACKEND_URL = document.getElementById("backendUrl").value.trim().replace(/\/$/, "");
+    localStorage.setItem("beaconBackendUrl", BACKEND_URL);
+    fetchAll();
+  }
+
+  function showPage(name) {
+    beepClick();
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("page-" + name).classList.add("active");
+    event.target.classList.add("active");
+  }
+
+  async function fetchAll() {
+    const statusEl = document.getElementById("connStatus");
+    try {
+      const [statusRes, logsRes, usageRes, tamperRes] = await Promise.all([
+        fetch(BACKEND_URL + "/api/status"),
+        fetch(BACKEND_URL + "/api/logs"),
+        fetch(BACKEND_URL + "/api/usage"),
+        fetch(BACKEND_URL + "/api/tamper-events"),
+      ]);
+      latestStatus = await statusRes.json();
+      latestLogs = await logsRes.json();
+      latestUsage = await usageRes.json();
+      latestTamper = await tamperRes.json();
+
+      reactToNewEvents();
+
+      renderOverview();
+      renderAssetCards();
+      renderUsage();
+      renderLogs();
+      renderTamper();
+
+      statusEl.innerHTML = "Connected to " + BACKEND_URL + " — last update " + new Date().toLocaleTimeString();
+    } catch (err) {
+      statusEl.innerHTML = `<div class="error-bubble">🤖💥 Ouch! Could not reach ${BACKEND_URL} — check the URL and that the server is running.</div>`;
+    }
+  }
+
+  function reactToNewEvents() {
+    const heldCount = Object.values(latestStatus).filter(i => !!i.held_by).length;
+    const isFirstLoad = (previousLogCount === 0 && previousTamperCount === 0);
+
+    if (!isFirstLoad && latestTamper.length > previousTamperCount) {
+      spawnBubble("ZAP!", "#ef476f");
+      beepAlarm();
+      setMascotState("tamper");
+      clearTimeout(mascotRevertTimer);
+      mascotRevertTimer = setTimeout(() => setMascotState(heldCount > 0 ? "busy" : "safe"), 5000);
+    } else if (!isFirstLoad && latestLogs.length > previousLogCount) {
+      const newest = latestLogs[0];
+      const newestTool = toolInfo(newest.asset);
+      if (newest.action === "checkout") {
+        spawnBubble("KAPOW! " + newestTool.name + " checked out", "#118ab2");
+        beepSuccess();
+      } else if (newest.action === "return") {
+        spawnBubble("WHAM! " + newestTool.name + " returned", "#06d6a0");
+        spawnConfetti();
+        beepSuccess();
+      } else if (newest.action === "conflict") {
+        spawnBubble("UH OH! " + newestTool.name + " already taken", "#ffd166");
+        beepAlarm();
+      }
+      setMascotState(heldCount > 0 ? "busy" : "safe");
+    } else if (isFirstLoad) {
+      setMascotState(heldCount > 0 ? "busy" : "safe");
+    }
+
+    previousLogCount = latestLogs.length;
+    previousTamperCount = latestTamper.length;
+  }
+
+  function renderOverview() {
+    const entries = Object.entries(latestStatus);
+    const heldCount = entries.filter(([, info]) => !!info.held_by).length;
+    document.querySelector("#page-overview .stat-card .value").textContent = heldCount;
+    document.getElementById("statAvailable").textContent = entries.length - heldCount;
+    document.getElementById("statTotal").textContent = latestLogs.length;
+    document.getElementById("statTamper").textContent = latestTamper.length;
+
+    const recent = latestLogs.slice(0, 6);
+    let rows = "";
+    recent.forEach(tx => {
+      const tool = toolInfo(tx.asset);
+      rows += `<tr><td>${tx.timestamp}</td><td>${tx.user || "—"}</td><td>${tool.icon} ${tool.name}</td><td>${tx.action}</td></tr>`;
+    });
+    document.getElementById("recentRows").innerHTML = rows || "<tr><td colspan='4'>No transactions yet.</td></tr>";
+  }
+
+  function renderAssetCards() {
+    const entries = Object.entries(latestStatus);
+    let html = "";
+    entries.forEach(([asset, info]) => {
+      const isHeld = !!info.held_by;
+      const tool = toolInfo(asset);
+      html += `
+        <div class="asset-card">
+          <div class="tool-icon">${tool.icon}</div>
+          <div class="tool-name">${tool.name}</div>
+          <div class="asset-id">TAG ${asset}</div>
+          ${isHeld
+            ? `<span class="badge badge-held">Held by ${info.held_by}</span>`
+            : `<span class="badge badge-available">Available</span>`}
+          <div class="subtitle" style="margin-top:8px;">Since ${info.since || "—"}</div>
+        </div>`;
+    });
+    document.getElementById("assetCards").innerHTML = html || "<div class='asset-card'>No tools logged yet.</div>";
+  }
+
+  function renderUsage() {
+    const maxCount = Math.max(1, ...latestUsage.map(u => u.checkout_count));
+    let rows = "";
+    latestUsage.forEach(u => {
+      const tool = toolInfo(u.asset);
+      const pct = Math.round((u.checkout_count / maxCount) * 100);
+      rows += `<tr>
+        <td>${tool.icon} ${tool.name}</td>
+        <td>${u.checkout_count}</td>
+        <td><div class="usage-bar-track"><div class="usage-bar-fill" style="width:${pct}%;"></div></div></td>
+      </tr>`;
+    });
+    document.getElementById("usageRows").innerHTML = rows || "<tr><td colspan='3'>No usage data yet.</td></tr>";
+  }
+
+  function renderLogs() {
+    let rows = "";
+    latestLogs.forEach(tx => {
+      const tool = toolInfo(tx.asset);
+      rows += `<tr><td>${tx.timestamp}</td><td>${tx.user || "—"}</td><td>${tool.icon} ${tool.name}</td><td>${tx.action}</td></tr>`;
+    });
+    document.getElementById("logRows").innerHTML = rows || "<tr><td colspan='4'>No transactions yet.</td></tr>";
+  }
+
+  function renderTamper() {
+    if (latestTamper.length === 0) return;
+    let rows = "";
+    latestTamper.forEach(ev => {
+      rows += `<tr><td>${ev.timestamp}</td><td><span class="badge badge-tamper">Lid opened!</span></td></tr>`;
+    });
+    document.getElementById("tamperRows").innerHTML = rows;
+  }
+
+  function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setTextColor(239, 71, 111);
+    doc.text("Lab Asset Checkout Beacon", 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Inventory Report — generated " + new Date().toLocaleString(), 14, 26);
+
+    const rows = Object.entries(latestStatus).map(([uid, info]) => {
+      const tool = toolInfo(uid);
+      return [tool.name, uid, info.held_by ? ("Held by " + info.held_by) : "Available", info.since || "—"];
+    });
+
+    doc.autoTable({
+      startY: 34,
+      head: [["Item", "Tag UID", "Status", "Since"]],
+      body: rows,
+      headStyles: { fillColor: [255, 209, 102], textColor: [45, 45, 45] },
+      alternateRowStyles: { fillColor: [255, 249, 235] },
+      styles: { fontSize: 10 },
+    });
+
+    const usageRows = latestUsage.map(u => {
+      const tool = toolInfo(u.asset);
+      return [tool.name, u.checkout_count];
+    });
+    if (usageRows.length) {
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 12,
+        head: [["Item", "Times Checked Out"]],
+        body: usageRows,
+        headStyles: { fillColor: [6, 214, 160], textColor: [2, 61, 44] },
+        alternateRowStyles: { fillColor: [235, 255, 248] },
+        styles: { fontSize: 10 },
+      });
+    }
+
+    doc.save("lab_asset_report_" + Date.now() + ".pdf");
+    spawnConfetti();
+    beepSuccess();
+  }
+
+  fetchAll();
+  setInterval(fetchAll, 5000);
+</script>
+
+</body>
+</html>
