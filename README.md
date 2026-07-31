@@ -86,6 +86,10 @@ Confirm it's running by opening http://localhost:8000 in a browser — you shoul
 Open beacon_dashboard.html in any browser. At the top, enter your backend's address (e.g., http://192.168.137.1:8000) and click Connect.
 
 Before relying on it, update the ASSET_NAMES object near the top of the dashboard's script with your actual RFID tag UIDs, mapped to real tool names.
+
+
+
+
 5. Full Test Sequence
 Power on the ESP32 — LCD should show "Tap your ID"
 Check Serial Monitor for "WiFi connected: [an IP address]"
@@ -96,6 +100,9 @@ Refresh the dashboard — the asset should now show as held by that user
 Tap the same two tags again — LCD shows "Returned!", amber LED, dashboard updates again
 Tap a different user, then the same held asset — LCD shows "Already taken by...", red LED, longer beep
 Open the enclosure lid — a tamper event should appear on the dashboard's Tamper Events tab
+
+
+
 Troubleshooting Quick Reference
 Symptom
 Likely Cause
